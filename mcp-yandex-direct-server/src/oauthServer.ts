@@ -16,7 +16,8 @@ export class OAuthCallbackServer {
 
   constructor(opts: OAuthServerOptions) {
     this.opts = opts;
-    this.app.get("/oauth/callback", async (req, res) => {
+    const callbackPath = safePathFromUrl(opts.redirectUri) ?? "/oauth/callback";
+    this.app.get(callbackPath, async (req, res) => {
       const code = req.query["code"] as string | undefined;
       const error = req.query["error"] as string | undefined;
       if (error) {
@@ -58,5 +59,14 @@ export class OAuthCallbackServer {
   stop() {
     if (this.server) this.server.close();
     this.server = undefined;
+  }
+}
+
+function safePathFromUrl(urlStr: string): string | undefined {
+  try {
+    const u = new URL(urlStr);
+    return u.pathname || "/oauth/callback";
+  } catch {
+    return undefined;
   }
 }

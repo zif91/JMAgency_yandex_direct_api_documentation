@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yandex.Direct MCP</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.5; padding: 2em; }
+        pre { background-color: #f4f4f4; padding: 1em; border-radius: 5px; white-space: pre-wrap; }
+        .flash { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .flash.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .flash.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        a { color: #007bff; }
+    </style>
+</head>
+<body>
+    <h1>Yandex.Direct MCP</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <p>Welcome to the Multi-Client-Panel for Yandex.Direct.</p>
+    <p>To get started, you need to authenticate with your Yandex account. This will grant the application access to your Yandex.Direct data.</p>
+    <a href="{{ url_for('login') }}">Login with Yandex</a>
+
+    <hr>
+
+    <h2>API Usage</h2>
+    <p>Once you have authenticated, you will receive a secret code. Use this code to make requests to the API, by passing it as a Bearer token in the Authorization header.</p>
+
+    <h3>Get Campaigns</h3>
+    <pre>
+curl -X GET http://localhost:5000/api/campaigns \
+-H "Authorization: Bearer YOUR_SECRET_CODE"
+    </pre>
+
+    <h3>Get Ad Groups</h3>
+    <p>Requires a list of Campaign IDs in the request body.</p>
+    <pre>
+curl -X POST http://localhost:5000/api/adgroups \
+-H "Authorization: Bearer YOUR_SECRET_CODE" \
+-H "Content-Type: application/json" \
+-d '{"campaign_ids": [123456, 789012]}'
+    </pre>
+
+    <h3>Get Ads</h3>
+    <p>Requires a list of Ad Group IDs in the request body.</p>
+    <pre>
+curl -X POST http://localhost:5000/api/ads \
+-H "Authorization: Bearer YOUR_SECRET_CODE" \
+-H "Content-Type: application/json" \
+-d '{"adgroup_ids": [11111, 22222]}'
+    </pre>
+
+    <h3>Get Keywords</h3>
+    <p>Requires a list of Ad Group IDs in the request body.</p>
+    <pre>
+curl -X POST http://localhost:5000/api/keywords \
+-H "Authorization: Bearer YOUR_SECRET_CODE" \
+-H "Content-Type: application/json" \
+-d '{"adgroup_ids": [11111, 22222]}'
+    </pre>
+
+    <h3>Get a Report</h3>
+    <p>Requires a Report Definition in the request body. The response will be in TSV format.</p>
+    <pre>
+curl -X POST http://localhost:5000/api/reports \
+-H "Authorization: Bearer YOUR_SECRET_CODE" \
+-H "Content-Type: application/json" \
+-d '{
+  "params": {
+    "ReportName": "My Campaign Performance Report",
+    "ReportType": "CAMPAIGN_PERFORMANCE_REPORT",
+    "DateRangeType": "LAST_7_DAYS",
+    "Format": "TSV",
+    "IncludeVAT": "NO",
+    "SelectionCriteria": {},
+    "FieldNames": ["Date", "CampaignName", "Impressions", "Clicks", "Cost"]
+  }
+}'
+    </pre>
+
+</body>
+</html>

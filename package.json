@@ -1,0 +1,30 @@
+{
+  "name": "@jacov911/yandex-direct-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Yandex Direct API integration",
+  "main": "server.py",
+  "bin": {
+    "yandex-direct-mcp": "./server.py"
+  },
+  "scripts": {
+    "start": "python server.py"
+  },
+  "keywords": [
+    "mcp",
+    "yandex",
+    "direct",
+    "api",
+    "advertising",
+    "jenova-ai",
+    "claude"
+  ],
+  "author": "JMAgency",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zif91/JMAgency_yandex_direct_api_documentation.git"
+  },
+  "engines": {
+    "python": ">=3.10"
+  }
+}

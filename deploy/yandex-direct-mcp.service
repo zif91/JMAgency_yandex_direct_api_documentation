@@ -1,0 +1,14 @@
+[Unit]
+Description=Yandex Direct MCP Flask API
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/yandex-direct-mcp
+Environment="PATH=/var/www/yandex-direct-mcp/venv/bin"
+ExecStart=/var/www/yandex-direct-mcp/venv/bin/gunicorn --workers 4 --bind 127.0.0.1:8000 --timeout 300 wsgi:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

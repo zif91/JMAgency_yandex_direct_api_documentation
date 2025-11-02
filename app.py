@@ -1,19 +1,40 @@
 import os
+import sys
+import logging
 import requests
 from flask import Flask, redirect, url_for, session, request, render_template, flash, jsonify
 from dotenv import load_dotenv
-import db
-from yandex_api import YandexDirectAPI
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+# Import with error handling
+try:
+    import db
+    from yandex_api import YandexDirectAPI
+    logger.info("Successfully imported db and yandex_api modules")
+except Exception as e:
+    logger.error(f"Failed to import modules: {e}", exc_info=True)
+    raise
+
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+# Use environment variable for secret key or generate a stable one
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production-' + os.getenv('RAILWAY_ENVIRONMENT', 'local'))
 
 YANDEX_CLIENT_ID = os.getenv("YANDEX_CLIENT_ID")
 YANDEX_CLIENT_SECRET = os.getenv("YANDEX_CLIENT_SECRET")
 # Use Railway public URL or fallback to localhost
 REDIRECT_URI = os.getenv("REDIRECT_URI", 'http://localhost:5000/redirect')
+
+logger.info(f"App configured with REDIRECT_URI: {REDIRECT_URI}")
+logger.info(f"YANDEX_CLIENT_ID configured: {bool(YANDEX_CLIENT_ID)}")
 
 @app.cli.command('init-db')
 def init_db_command():
@@ -24,23 +45,45 @@ def init_db_command():
 # Initialize database on startup if it doesn't exist
 def init_db_if_needed():
     """Initialize database if it doesn't exist"""
-    import os.path
-    if not os.path.isfile('database.db'):
-        print('Database not found, initializing...')
-        db.init_db()
-        print('Database initialized successfully')
+    try:
+        import os.path
+        if not os.path.isfile('database.db'):
+            logger.info('Database not found, initializing...')
+            db.init_db()
+            logger.info('Database initialized successfully')
+        else:
+            logger.info('Database already exists')
+    except Exception as e:
+        logger.error(f"Error initializing database: {e}", exc_info=True)
+        raise
 
-# Call on app startup
-init_db_if_needed()
+# Use before_first_request to initialize DB only once
+@app.before_request
+def before_first_request():
+    """Initialize on first request"""
+    if not hasattr(app, '_db_initialized'):
+        init_db_if_needed()
+        app._db_initialized = True
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        logger.info("Index route called")
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Error in index route: {e}", exc_info=True)
+        return f"Error: {str(e)}", 500
 
 @app.route('/favicon.ico')
 def favicon():
     """Return 204 No Content for favicon to avoid 502 errors"""
     return '', 204
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Global error handler"""
+    logger.error(f"Unhandled exception: {e}", exc_info=True)
+    return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 @app.route('/login')
 def login():
@@ -211,5 +254,11 @@ def get_reports_api():
 if __name__ == '__main__':
     # Railway provides PORT environment variable
     port = int(os.environ.get('PORT', 5000))
+    logger.info(f"Starting Flask development server on port {port}")
     # Listen on all interfaces for Railway
     app.run(host='0.0.0.0', port=port, debug=False)
+
+# Log application startup
+logger.info("Flask application module loaded successfully")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Flask app name: {app.name}")

@@ -12,7 +12,8 @@ app.secret_key = os.urandom(24)
 
 YANDEX_CLIENT_ID = os.getenv("YANDEX_CLIENT_ID")
 YANDEX_CLIENT_SECRET = os.getenv("YANDEX_CLIENT_SECRET")
-REDIRECT_URI = 'http://localhost:5000/redirect'
+# Use Railway public URL or fallback to localhost
+REDIRECT_URI = os.getenv("REDIRECT_URI", 'http://localhost:5000/redirect')
 
 @app.cli.command('init-db')
 def init_db_command():
@@ -20,9 +21,26 @@ def init_db_command():
     db.init_db()
     print('Initialized the database.')
 
+# Initialize database on startup if it doesn't exist
+def init_db_if_needed():
+    """Initialize database if it doesn't exist"""
+    import os.path
+    if not os.path.isfile('database.db'):
+        print('Database not found, initializing...')
+        db.init_db()
+        print('Database initialized successfully')
+
+# Call on app startup
+init_db_if_needed()
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    """Return 204 No Content for favicon to avoid 502 errors"""
+    return '', 204
 
 @app.route('/login')
 def login():
@@ -191,4 +209,7 @@ def get_reports_api():
         return jsonify({"error": f"An unexpected error occurred: {e}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Railway provides PORT environment variable
+    port = int(os.environ.get('PORT', 5000))
+    # Listen on all interfaces for Railway
+    app.run(host='0.0.0.0', port=port, debug=False)

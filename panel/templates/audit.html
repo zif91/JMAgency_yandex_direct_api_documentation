@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}AI Audit - Yandex Direct Panel{% endblock %}
+
+{% block content %}
+<div class="audit-page">
+    <h1>AI Campaign Audit</h1>
+
+    <section class="section">
+        <h2>Run New Audit</h2>
+
+        {% if accounts %}
+            <form action="{{ url_for('run_audit') }}" method="POST" class="audit-form">
+                <div class="form-group">
+                    <label for="account_id">Select Account</label>
+                    <select name="account_id" id="account_id" required>
+                        {% for account in accounts %}
+                            {% if account.is_active %}
+                                <option value="{{ account.id }}">
+                                    {{ account.account_name }} ({{ account.yandex_login }})
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="audit_type">Audit Type</label>
+                    <select name="audit_type" id="audit_type">
+                        <option value="full">Full Audit</option>
+                        <option value="campaigns">Campaigns Only</option>
+                        <option value="adgroups">Ad Groups Only</option>
+                        <option value="ads">Ads Only</option>
+                        <option value="keywords">Keywords Only</option>
+                        <option value="structure">Account Structure</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Run Audit</button>
+            </form>
+        {% else %}
+            <div class="empty-state">
+                <p>You need to connect a Yandex account first.</p>
+                <a href="{{ url_for('accounts') }}" class="btn btn-primary">Add Account</a>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="section">
+        <h2>Audit History</h2>
+
+        {% if history %}
+            <div class="audit-history">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Account</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for audit in history %}
+                            <tr>
+                                <td>{{ audit.created_at[:16].replace('T', ' ') }}</td>
+                                <td>{{ audit.account_name }} ({{ audit.yandex_login }})</td>
+                                <td>{{ audit.audit_type }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ audit.status }}">
+                                        {{ audit.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if audit.status == 'completed' %}
+                                        <a href="{{ url_for('audit_result', audit_id=audit.id) }}" class="btn btn-small">
+                                            View Results
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="empty-message">No audits run yet. Start your first audit above!</p>
+        {% endif %}
+    </section>
+
+    <section class="section">
+        <h2>About AI Audit</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>What We Check</h3>
+                <ul>
+                    <li>Campaign structure and settings</li>
+                    <li>Ad group organization</li>
+                    <li>Ad quality and variations</li>
+                    <li>Keyword coverage and match types</li>
+                    <li>Bid settings and strategies</li>
+                    <li>Budget optimization</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <h3>Issue Severity</h3>
+                <ul>
+                    <li><span class="severity critical">Critical</span> - Immediate action required</li>
+                    <li><span class="severity warning">Warning</span> - Should be addressed soon</li>
+                    <li><span class="severity info">Info</span> - Informational findings</li>
+                    <li><span class="severity opportunity">Opportunity</span> - Optimization potential</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <h3>AI Recommendations</h3>
+                <p>Our AI analyzes your campaigns and provides personalized recommendations based on best practices and your specific account data.</p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Yandex Direct Panel{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+    <h1>Settings</h1>
+
+    <section class="section">
+        <h2>Account Information</h2>
+        <div class="info-card">
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Account Created:</strong> {{ user.created_at[:10] }}</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>API Key</h2>
+        <div class="api-key-section">
+            <p>Your API key is used to authenticate API requests:</p>
+            <div class="api-key-display">
+                <code id="api-key">{{ user.api_key }}</code>
+                <button onclick="copyApiKey()" class="btn btn-small">Copy</button>
+            </div>
+
+            <form action="{{ url_for('regenerate_api_key') }}" method="POST"
+                  onsubmit="return confirm('Are you sure? Your old API key will stop working.');">
+                <button type="submit" class="btn btn-warning">Regenerate API Key</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>API Usage Examples</h2>
+
+        <h3>Authentication</h3>
+        <p>Include your API key in the Authorization header:</p>
+        <pre><code>Authorization: Bearer {{ user.api_key[:20] }}...</code></pre>
+
+        <h3>Get All Connected Accounts</h3>
+        <pre><code>curl -X GET http://localhost:5000/api/accounts \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+
+        <h3>Get Campaigns</h3>
+        <pre><code>curl -X GET "http://localhost:5000/api/campaigns?account_id=ACCOUNT_ID" \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+
+        <h3>Get Ad Groups</h3>
+        <pre><code>curl -X POST http://localhost:5000/api/adgroups \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "YOUR_ACCOUNT_ID",
+    "campaign_ids": [12345, 67890]
+  }'</code></pre>
+
+        <h3>Get Keywords</h3>
+        <pre><code>curl -X POST http://localhost:5000/api/keywords \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "YOUR_ACCOUNT_ID",
+    "campaign_ids": [12345]
+  }'</code></pre>
+
+        <h3>Run Audit via API</h3>
+        <pre><code>curl -X POST http://localhost:5000/api/audit \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "YOUR_ACCOUNT_ID",
+    "audit_type": "full"
+  }'</code></pre>
+
+        <h3>Get Audit History</h3>
+        <pre><code>curl -X GET "http://localhost:5000/api/audit/history?limit=10" \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+
+        <h3>Get Performance Report</h3>
+        <pre><code>curl -X POST http://localhost:5000/api/reports \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "YOUR_ACCOUNT_ID",
+    "ReportName": "Campaign Performance",
+    "ReportType": "CAMPAIGN_PERFORMANCE_REPORT",
+    "DateRangeType": "LAST_30_DAYS",
+    "Format": "TSV",
+    "IncludeVAT": "NO",
+    "SelectionCriteria": {},
+    "FieldNames": ["Date", "CampaignName", "Impressions", "Clicks", "Cost", "Conversions"]
+  }'</code></pre>
+    </section>
+</div>
+
+<script>
+function copyApiKey() {
+    const apiKey = document.getElementById('api-key').textContent;
+    navigator.clipboard.writeText(apiKey).then(function() {
+        alert('API key copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

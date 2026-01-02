@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Result - Yandex Direct Panel{% endblock %}
+
+{% block content %}
+<div class="audit-result-page">
+    <div class="page-header">
+        <h1>Audit Result</h1>
+        <a href="{{ url_for('audit_page') }}" class="btn btn-secondary">Back to Audit</a>
+    </div>
+
+    <div class="audit-meta">
+        <p><strong>Account:</strong> {{ audit.yandex_account_id }}</p>
+        <p><strong>Type:</strong> {{ audit.audit_type }}</p>
+        <p><strong>Date:</strong> {{ audit.created_at[:16].replace('T', ' ') }}</p>
+        <p><strong>Status:</strong>
+            <span class="status-badge status-{{ audit.status }}">{{ audit.status }}</span>
+        </p>
+    </div>
+
+    {% if result %}
+        {% if result.error %}
+            <div class="error-box">
+                <h3>Error</h3>
+                <p>{{ result.error }}</p>
+            </div>
+        {% else %}
+            <!-- Summary Section -->
+            {% if result.summary %}
+                <section class="result-section">
+                    <h2>Summary</h2>
+
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <div class="health-score score-{{ 'good' if result.summary.health_score >= 70 else ('medium' if result.summary.health_score >= 40 else 'bad') }}">
+                                <span class="score-value">{{ result.summary.health_score }}</span>
+                                <span class="score-label">Health Score</span>
+                            </div>
+                        </div>
+
+                        <div class="summary-card">
+                            <h4>Issues Found</h4>
+                            <p class="big-number">{{ result.summary.total_issues }}</p>
+                            <ul class="severity-list">
+                                {% if result.summary.severity_breakdown %}
+                                    <li><span class="severity critical">Critical:</span> {{ result.summary.severity_breakdown.critical or 0 }}</li>
+                                    <li><span class="severity warning">Warning:</span> {{ result.summary.severity_breakdown.warning or 0 }}</li>
+                                    <li><span class="severity info">Info:</span> {{ result.summary.severity_breakdown.info or 0 }}</li>
+                                    <li><span class="severity opportunity">Opportunity:</span> {{ result.summary.severity_breakdown.opportunity or 0 }}</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+
+                        <div class="summary-card">
+                            <h4>Key Metrics</h4>
+                            {% if result.summary.key_metrics %}
+                                <ul>
+                                    <li>Campaigns: {{ result.summary.key_metrics.campaigns or 0 }} ({{ result.summary.key_metrics.active_campaigns or 0 }} active)</li>
+                                    <li>Ad Groups: {{ result.summary.key_metrics.adgroups or 0 }}</li>
+                                    <li>Ads: {{ result.summary.key_metrics.ads or 0 }}</li>
+                                    <li>Keywords: {{ result.summary.key_metrics.keywords or 0 }}</li>
+                                </ul>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+
+            <!-- Issues Section -->
+            {% if result.issues %}
+                <section class="result-section">
+                    <h2>Issues ({{ result.issues|length }})</h2>
+
+                    <div class="issues-list">
+                        {% for issue in result.issues %}
+                            <div class="issue-card severity-{{ issue.severity }}">
+                                <div class="issue-header">
+                                    <span class="severity-badge {{ issue.severity }}">{{ issue.severity }}</span>
+                                    <span class="issue-category">{{ issue.category }}</span>
+                                </div>
+                                <h4>{{ issue.title }}</h4>
+                                <p>{{ issue.description }}</p>
+                                <div class="issue-recommendation">
+                                    <strong>Recommendation:</strong> {{ issue.recommendation }}
+                                </div>
+                                {% if issue.potential_impact %}
+                                    <div class="issue-impact">
+                                        <strong>Potential Impact:</strong> {{ issue.potential_impact }}
+                                    </div>
+                                {% endif %}
+                                {% if issue.affected_items %}
+                                    <div class="affected-items">
+                                        <strong>Affected IDs:</strong> {{ issue.affected_items[:5]|join(', ') }}
+                                        {% if issue.affected_items|length > 5 %}
+                                            <span class="more">and {{ issue.affected_items|length - 5 }} more</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+
+            <!-- Recommendations Section -->
+            {% if result.recommendations %}
+                <section class="result-section">
+                    <h2>AI Recommendations</h2>
+
+                    <div class="recommendations-list">
+                        {% for rec in result.recommendations %}
+                            <div class="recommendation-card priority-{{ rec.priority }}">
+                                <div class="rec-priority">Priority {{ rec.priority }}</div>
+                                <h4>{{ rec.title }}</h4>
+                                <p>{{ rec.description }}</p>
+                                {% if rec.expected_impact %}
+                                    <div class="expected-impact">
+                                        <strong>Expected Impact:</strong> {{ rec.expected_impact }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+        {% endif %}
+    {% else %}
+        <div class="no-result">
+            <p>No result data available.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

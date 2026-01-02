@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Yandex Direct Panel{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Dashboard</h1>
+
+    <div class="welcome-card">
+        <h2>Welcome, {{ user.email }}!</h2>
+        <p>Your API Key: <code class="api-key">{{ user.api_key }}</code></p>
+    </div>
+
+    <section class="section">
+        <div class="section-header">
+            <h2>Connected Accounts</h2>
+            <a href="{{ url_for('accounts') }}" class="btn btn-secondary">Manage Accounts</a>
+        </div>
+
+        {% if accounts %}
+            <div class="accounts-grid">
+                {% for account in accounts %}
+                    <div class="account-card {% if account.is_active %}active{% else %}inactive{% endif %}">
+                        <h3>{{ account.account_name }}</h3>
+                        <p class="yandex-login">{{ account.yandex_login }}</p>
+                        <span class="status-badge {% if account.is_active %}status-active{% else %}status-inactive{% endif %}">
+                            {{ 'Active' if account.is_active else 'Inactive' }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No Yandex accounts connected yet.</p>
+                <a href="{{ url_for('add_account') }}" class="btn btn-primary">Add Your First Account</a>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="section">
+        <div class="section-header">
+            <h2>Quick Actions</h2>
+        </div>
+
+        <div class="quick-actions">
+            <a href="{{ url_for('add_account') }}" class="action-card">
+                <h3>+ Add Account</h3>
+                <p>Connect a new Yandex Direct account</p>
+            </a>
+
+            <a href="{{ url_for('audit_page') }}" class="action-card">
+                <h3>Run Audit</h3>
+                <p>AI-powered campaign analysis</p>
+            </a>
+
+            <a href="{{ url_for('settings') }}" class="action-card">
+                <h3>API Settings</h3>
+                <p>Manage API key and settings</p>
+            </a>
+        </div>
+    </section>
+</div>
+{% endblock %}

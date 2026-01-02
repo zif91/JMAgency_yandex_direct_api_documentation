@@ -1,0 +1,12 @@
+# Core
+Flask>=2.3.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+Werkzeug>=2.3.0
+
+# AI Audit (optional)
+anthropic>=0.18.0
+
+# Testing
+pytest>=7.4.0
+pytest-mock>=3.11.0

@@ -12,9 +12,10 @@ from flask import (
 )
 from dotenv import load_dotenv
 
+import asyncio
 import db
 from yandex_api import YandexDirectAPI
-from audit_agent import AuditAgent, run_quick_audit
+from agent import YandexDirectAuditAgent, run_audit as run_agent_audit
 
 load_dotenv()
 
@@ -288,7 +289,7 @@ def audit_page():
 @app.route('/audit/run', methods=['POST'])
 @login_required
 def run_audit():
-    """Run audit for selected account."""
+    """Run audit for selected account using Claude Agent SDK."""
     account_id = request.form.get('account_id')
     audit_type = request.form.get('audit_type', 'full')
 
@@ -302,16 +303,16 @@ def run_audit():
     db.update_audit_status(audit_id, 'running')
 
     try:
-        api = YandexDirectAPI(
-            token=account['yandex_token'],
-            login=account['yandex_login']
-        )
-        agent = AuditAgent(
-            api=api,
+        # Create agent with Claude Agent SDK
+        agent = YandexDirectAuditAgent(
+            yandex_token=account['yandex_token'],
+            yandex_login=account['yandex_login'],
             account_name=account['account_name'],
             anthropic_api_key=ANTHROPIC_API_KEY
         )
-        result = agent.run_audit(audit_type=audit_type)
+
+        # Run async audit
+        result = asyncio.run(agent.run_audit())
 
         db.update_audit_status(audit_id, 'completed', result.to_json())
         flash('Audit completed successfully!', 'success')
@@ -496,10 +497,9 @@ def api_get_report():
 @app.route('/api/audit', methods=['POST'])
 @api_auth_required
 def api_run_audit():
-    """Run audit via API."""
+    """Run audit via API using Claude Agent SDK."""
     data = request.get_json() or {}
     account_id = data.get('account_id')
-    audit_type = data.get('audit_type', 'full')
 
     if not account_id:
         return jsonify({"error": "account_id is required"}), 400
@@ -509,12 +509,12 @@ def api_run_audit():
         return jsonify({"error": "Account not found"}), 404
 
     try:
-        result = run_quick_audit(
-            token=account['yandex_token'],
-            login=account['yandex_login'],
+        result = asyncio.run(run_agent_audit(
+            yandex_token=account['yandex_token'],
+            yandex_login=account['yandex_login'],
             account_name=account['account_name'],
-            anthropic_key=ANTHROPIC_API_KEY
-        )
+            anthropic_api_key=ANTHROPIC_API_KEY
+        ))
         return jsonify(result.to_dict())
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -12,6 +12,9 @@ from datetime import datetime, timedelta
 yandex_api = None
 audit_memory = {}
 
+# Yandex Direct API returns monetary values in microroubles (1 ruble = 1,000,000 microroubles)
+MICROROUBLES_TO_ROUBLES = 1_000_000
+
 
 def set_api_client(api_client):
     """Set the Yandex API client for tools to use."""
@@ -79,19 +82,24 @@ async def get_campaigns_stats(args: dict[str, Any]) -> dict[str, Any]:
             cid = str(campaign.get("Id"))
             camp_stats = next((s for s in stats if s.get("CampaignId") == cid), {})
 
+            # Convert daily budget from microroubles to roubles
+            daily_budget_micro = campaign.get("DailyBudget", {}).get("Amount")
+            daily_budget = daily_budget_micro / MICROROUBLES_TO_ROUBLES if daily_budget_micro else None
+
+            # Cost and avg_cpc from reports are already in roubles (divided by 1M in API)
             camp_data = {
                 "id": campaign.get("Id"),
                 "name": campaign.get("Name"),
                 "status": campaign.get("Status"),
                 "state": campaign.get("State"),
                 "type": campaign.get("Type"),
-                "daily_budget": campaign.get("DailyBudget", {}).get("Amount"),
+                "daily_budget": daily_budget,
                 "impressions": int(camp_stats.get("Impressions", 0)),
                 "clicks": int(camp_stats.get("Clicks", 0)),
-                "cost": float(camp_stats.get("Cost", 0)),
+                "cost": float(camp_stats.get("Cost", 0)) / MICROROUBLES_TO_ROUBLES,
                 "conversions": int(camp_stats.get("Conversions", 0)),
                 "ctr": float(camp_stats.get("Ctr", 0)),
-                "avg_cpc": float(camp_stats.get("AvgCpc", 0))
+                "avg_cpc": float(camp_stats.get("AvgCpc", 0)) / MICROROUBLES_TO_ROUBLES
             }
             result["campaigns"].append(camp_data)
 
@@ -309,13 +317,13 @@ async def get_keywords_analysis(args: dict[str, Any]) -> dict[str, Any]:
         return _error("API client not initialized")
 
     try:
-        # Get active campaigns
-        campaigns_response = yandex_api.get_campaigns(states=["ON"])
+        # Get all campaigns (not just active - analyze full account)
+        campaigns_response = yandex_api.get_campaigns()
         campaigns = campaigns_response.get("result", {}).get("Campaigns", [])
         campaign_ids = [c["Id"] for c in campaigns]
 
         if not campaign_ids:
-            return _success({"message": "No active campaigns", "issues": []})
+            return _success({"message": "No campaigns in account", "issues": [], "score": 100})
 
         # Get keywords
         keywords_response = yandex_api.get_keywords(campaign_ids=campaign_ids)
@@ -449,7 +457,7 @@ async def get_autotargeting_stats(args: dict[str, Any]) -> dict[str, Any]:
 
         for row in stats:
             clicks = int(row.get("Clicks", 0))
-            cost = float(row.get("Cost", 0))
+            cost = float(row.get("Cost", 0)) / MICROROUBLES_TO_ROUBLES
             criterion_type = row.get("CriterionType", "")
 
             total_clicks += clicks
@@ -517,13 +525,13 @@ async def get_ads_quality(args: dict[str, Any]) -> dict[str, Any]:
         return _error("API client not initialized")
 
     try:
-        # Get active campaigns
-        campaigns_response = yandex_api.get_campaigns(states=["ON"])
+        # Get all campaigns (analyze full account structure)
+        campaigns_response = yandex_api.get_campaigns()
         campaigns = campaigns_response.get("result", {}).get("Campaigns", [])
         campaign_ids = [c["Id"] for c in campaigns]
 
         if not campaign_ids:
-            return _success({"message": "No active campaigns", "issues": []})
+            return _success({"message": "No campaigns in account", "issues": [], "score": 100})
 
         # Get ads
         ads_response = yandex_api.get_ads(campaign_ids=campaign_ids)
@@ -751,13 +759,13 @@ async def get_utm_analysis(args: dict[str, Any]) -> dict[str, Any]:
         return _error("API client not initialized")
 
     try:
-        # Get ads with URLs
-        campaigns_response = yandex_api.get_campaigns(states=["ON"])
+        # Get all ads with URLs
+        campaigns_response = yandex_api.get_campaigns()
         campaigns = campaigns_response.get("result", {}).get("Campaigns", [])
         campaign_ids = [c["Id"] for c in campaigns]
 
         if not campaign_ids:
-            return _success({"message": "No active campaigns", "issues": []})
+            return _success({"message": "No campaigns in account", "issues": [], "score": 100})
 
         ads_response = yandex_api.get_ads(campaign_ids=campaign_ids)
         ads = ads_response.get("result", {}).get("Ads", [])

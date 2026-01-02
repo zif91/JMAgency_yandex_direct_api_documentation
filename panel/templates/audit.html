@@ -10,7 +10,7 @@
         <h2>Run New Audit</h2>
 
         {% if accounts %}
-            <form action="{{ url_for('run_audit') }}" method="POST" class="audit-form">
+            <form action="{{ url_for('run_audit') }}" method="POST" class="audit-form" id="audit-form">
                 <div class="form-group">
                     <label for="account_id">Select Account</label>
                     <select name="account_id" id="account_id" required>
@@ -36,8 +36,57 @@
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn-primary">Run Audit</button>
+                <button type="submit" class="btn btn-primary" id="submit-btn">Run Audit</button>
             </form>
+
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+                <div style="text-align: center;">
+                    <div class="spinner" style="width: 60px; height: 60px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+                    <h2 style="color: #333; margin-bottom: 10px;">🤖 AI Аудит запущен...</h2>
+                    <p style="color: #666; font-size: 14px;" id="loading-status">Подключение к Yandex Direct API...</p>
+                    <p style="color: #999; font-size: 12px; margin-top: 20px;">Это может занять 30-60 секунд</p>
+                </div>
+            </div>
+
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+
+            <script>
+                const form = document.getElementById('audit-form');
+                const overlay = document.getElementById('loading-overlay');
+                const submitBtn = document.getElementById('submit-btn');
+                const statusText = document.getElementById('loading-status');
+
+                const statusMessages = [
+                    'Подключение к Yandex Direct API...',
+                    'Загрузка данных о кампаниях...',
+                    'Анализ бюджетов и ставок...',
+                    'Проверка ключевых слов...',
+                    'Оценка качества объявлений...',
+                    'Анализ структуры аккаунта...',
+                    'AI генерирует рекомендации...',
+                    'Формирование отчёта...'
+                ];
+
+                let messageIndex = 0;
+
+                form.addEventListener('submit', function() {
+                    overlay.style.display = 'flex';
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Аудит запущен...';
+
+                    // Rotate status messages
+                    setInterval(function() {
+                        messageIndex = (messageIndex + 1) % statusMessages.length;
+                        statusText.textContent = statusMessages[messageIndex];
+                    }, 4000);
+                });
+            </script>
         {% else %}
             <div class="empty-state">
                 <p>You need to connect a Yandex account first.</p>

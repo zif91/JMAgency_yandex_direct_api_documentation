@@ -5,128 +5,201 @@
 {% block content %}
 <div class="audit-result-page">
     <div class="page-header">
-        <h1>Audit Result</h1>
-        <a href="{{ url_for('audit_page') }}" class="btn btn-secondary">Back to Audit</a>
+        <h1>Результат аудита</h1>
+        <a href="{{ url_for('audit_page') }}" class="btn btn-secondary">← Назад к аудитам</a>
     </div>
 
-    <div class="audit-meta">
-        <p><strong>Account:</strong> {{ audit.yandex_account_id }}</p>
-        <p><strong>Type:</strong> {{ audit.audit_type }}</p>
-        <p><strong>Date:</strong> {{ audit.created_at[:16].replace('T', ' ') }}</p>
-        <p><strong>Status:</strong>
+    <div class="audit-meta" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p><strong>Дата:</strong> {{ audit.created_at[:16].replace('T', ' ') }}</p>
+        <p><strong>Тип:</strong> {{ audit.audit_type }}</p>
+        <p><strong>Статус:</strong>
             <span class="status-badge status-{{ audit.status }}">{{ audit.status }}</span>
         </p>
     </div>
 
     {% if result %}
         {% if result.error %}
-            <div class="error-box">
-                <h3>Error</h3>
+            <div class="error-box" style="background: #fee; border: 1px solid #f00; padding: 20px; border-radius: 8px;">
+                <h3>Ошибка</h3>
                 <p>{{ result.error }}</p>
             </div>
         {% else %}
-            <!-- Summary Section -->
-            {% if result.summary %}
-                <section class="result-section">
-                    <h2>Summary</h2>
-
-                    <div class="summary-grid">
-                        <div class="summary-card">
-                            <div class="health-score score-{{ 'good' if result.summary.health_score >= 70 else ('medium' if result.summary.health_score >= 40 else 'bad') }}">
-                                <span class="score-value">{{ result.summary.health_score }}</span>
-                                <span class="score-label">Health Score</span>
-                            </div>
+            <!-- Verdict Section -->
+            <section class="result-section" style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <div style="text-align: center; padding: 20px; background: {% if result.verdict == 'ХОРОШО' %}#e8f5e9{% elif result.verdict == 'ТРЕБУЕТ УЛУЧШЕНИЯ' %}#fff3e0{% else %}#ffebee{% endif %}; border-radius: 8px; min-width: 150px;">
+                        <div style="font-size: 48px; font-weight: bold; color: {% if result.verdict == 'ХОРОШО' %}#2e7d32{% elif result.verdict == 'ТРЕБУЕТ УЛУЧШЕНИЯ' %}#f57c00{% else %}#c62828{% endif %};">
+                            {{ result.score }}
                         </div>
-
-                        <div class="summary-card">
-                            <h4>Issues Found</h4>
-                            <p class="big-number">{{ result.summary.total_issues }}</p>
-                            <ul class="severity-list">
-                                {% if result.summary.severity_breakdown %}
-                                    <li><span class="severity critical">Critical:</span> {{ result.summary.severity_breakdown.critical or 0 }}</li>
-                                    <li><span class="severity warning">Warning:</span> {{ result.summary.severity_breakdown.warning or 0 }}</li>
-                                    <li><span class="severity info">Info:</span> {{ result.summary.severity_breakdown.info or 0 }}</li>
-                                    <li><span class="severity opportunity">Opportunity:</span> {{ result.summary.severity_breakdown.opportunity or 0 }}</li>
-                                {% endif %}
-                            </ul>
-                        </div>
-
-                        <div class="summary-card">
-                            <h4>Key Metrics</h4>
-                            {% if result.summary.key_metrics %}
-                                <ul>
-                                    <li>Campaigns: {{ result.summary.key_metrics.campaigns or 0 }} ({{ result.summary.key_metrics.active_campaigns or 0 }} active)</li>
-                                    <li>Ad Groups: {{ result.summary.key_metrics.adgroups or 0 }}</li>
-                                    <li>Ads: {{ result.summary.key_metrics.ads or 0 }}</li>
-                                    <li>Keywords: {{ result.summary.key_metrics.keywords or 0 }}</li>
-                                </ul>
-                            {% endif %}
-                        </div>
+                        <div style="font-size: 14px; color: #666;">из 100</div>
                     </div>
-                </section>
+                    <div>
+                        <h2 style="margin: 0; font-size: 28px; color: {% if result.verdict == 'ХОРОШО' %}#2e7d32{% elif result.verdict == 'ТРЕБУЕТ УЛУЧШЕНИЯ' %}#f57c00{% else %}#c62828{% endif %};">
+                            {{ result.verdict }}
+                        </h2>
+                        <p style="margin: 10px 0 0 0; color: #666;">
+                            Найдено проблем: {{ result.issues_count }}
+                            {% if result.critical_count > 0 %}
+                                <span style="color: #c62828;">(критических: {{ result.critical_count }})</span>
+                            {% endif %}
+                        </p>
+                        {% if result.potential_savings > 0 %}
+                            <p style="margin: 5px 0 0 0; color: #2e7d32;">
+                                💰 Потенциальная экономия: {{ result.potential_savings|int }} руб/мес
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scores by Category -->
+            {% if result.full_report and result.full_report.scores %}
+            <section class="result-section" style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h3>Оценки по категориям</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;">
+                    {% for category, score in result.full_report.scores.items() %}
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: {% if score >= 80 %}#2e7d32{% elif score >= 50 %}#f57c00{% else %}#c62828{% endif %};">
+                            {{ score }}
+                        </div>
+                        <div style="font-size: 12px; color: #666; text-transform: capitalize;">{{ category }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Campaigns Info -->
+            {% if result.full_report and result.full_report.campaigns %}
+            <section class="result-section" style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h3>Кампании ({{ result.full_report.campaigns.total_campaigns }})</h3>
+                <p style="color: #666; margin-bottom: 15px;">
+                    Активных: {{ result.full_report.campaigns.active_campaigns }} |
+                    На паузе: {{ result.full_report.campaigns.paused_campaigns }}
+                </p>
+
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f5f5f5;">
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Название</th>
+                                <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Статус</th>
+                                <th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Показы</th>
+                                <th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Клики</th>
+                                <th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Расход</th>
+                                <th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">CTR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign in result.full_report.campaigns.campaigns %}
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">{{ campaign.name }}</td>
+                                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                    <span style="padding: 2px 8px; border-radius: 12px; font-size: 12px; background: {% if campaign.state == 'ON' %}#e8f5e9; color: #2e7d32{% elif campaign.state == 'SUSPENDED' %}#fff3e0; color: #f57c00{% else %}#f5f5f5; color: #666{% endif %};">
+                                        {{ campaign.state }}
+                                    </span>
+                                </td>
+                                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">{{ campaign.impressions|default(0) }}</td>
+                                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">{{ campaign.clicks|default(0) }}</td>
+                                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">{{ "%.2f"|format(campaign.cost|default(0)) }} ₽</td>
+                                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">{{ "%.2f"|format(campaign.ctr|default(0)) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold; background: #f5f5f5;">
+                                <td style="padding: 10px;">ИТОГО</td>
+                                <td style="padding: 10px;"></td>
+                                <td style="padding: 10px; text-align: right;">{{ result.full_report.campaigns.totals.impressions }}</td>
+                                <td style="padding: 10px; text-align: right;">{{ result.full_report.campaigns.totals.clicks }}</td>
+                                <td style="padding: 10px; text-align: right;">{{ "%.2f"|format(result.full_report.campaigns.totals.cost) }} ₽</td>
+                                <td style="padding: 10px; text-align: right;"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
             {% endif %}
 
             <!-- Issues Section -->
-            {% if result.issues %}
-                <section class="result-section">
-                    <h2>Issues ({{ result.issues|length }})</h2>
+            {% if result.full_report and result.full_report.issues %}
+            <section class="result-section" style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h3>Найденные проблемы ({{ result.full_report.issues|length }})</h3>
 
-                    <div class="issues-list">
-                        {% for issue in result.issues %}
-                            <div class="issue-card severity-{{ issue.severity }}">
-                                <div class="issue-header">
-                                    <span class="severity-badge {{ issue.severity }}">{{ issue.severity }}</span>
-                                    <span class="issue-category">{{ issue.category }}</span>
-                                </div>
-                                <h4>{{ issue.title }}</h4>
-                                <p>{{ issue.description }}</p>
-                                <div class="issue-recommendation">
-                                    <strong>Recommendation:</strong> {{ issue.recommendation }}
-                                </div>
-                                {% if issue.potential_impact %}
-                                    <div class="issue-impact">
-                                        <strong>Potential Impact:</strong> {{ issue.potential_impact }}
-                                    </div>
-                                {% endif %}
-                                {% if issue.affected_items %}
-                                    <div class="affected-items">
-                                        <strong>Affected IDs:</strong> {{ issue.affected_items[:5]|join(', ') }}
-                                        {% if issue.affected_items|length > 5 %}
-                                            <span class="more">and {{ issue.affected_items|length - 5 }} more</span>
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
+                <div style="margin-top: 15px;">
+                    {% for issue in result.full_report.issues %}
+                    <div style="background: {% if issue.type == 'critical' %}#ffebee{% elif issue.type == 'warning' %}#fff3e0{% else %}#e3f2fd{% endif %}; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid {% if issue.type == 'critical' %}#c62828{% elif issue.type == 'warning' %}#f57c00{% else %}#1976d2{% endif %};">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <span style="padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; background: {% if issue.type == 'critical' %}#c62828{% elif issue.type == 'warning' %}#f57c00{% else %}#1976d2{% endif %}; color: white;">
+                                {{ issue.type }}
+                            </span>
+                            <strong>{{ issue.issue }}</strong>
+                        </div>
+                        <p style="margin: 0 0 8px 0; color: #333;">{{ issue.description }}</p>
+                        {% if issue.recommendation %}
+                        <p style="margin: 0; color: #666; font-size: 14px;">
+                            💡 <em>{{ issue.recommendation }}</em>
+                        </p>
+                        {% endif %}
+                        {% if issue.campaigns %}
+                        <p style="margin: 8px 0 0 0; color: #666; font-size: 13px;">
+                            Затронутые кампании: {{ issue.campaigns|join(', ') }}
+                        </p>
+                        {% endif %}
                     </div>
-                </section>
+                    {% endfor %}
+                </div>
+            </section>
             {% endif %}
 
-            <!-- Recommendations Section -->
-            {% if result.recommendations %}
-                <section class="result-section">
-                    <h2>AI Recommendations</h2>
+            <!-- AI Full Report (Markdown) -->
+            {% if result.ai_report %}
+            <section class="result-section" style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h3>📝 Полный отчёт AI</h3>
+                <div id="ai-report-content" style="margin-top: 15px; line-height: 1.7;"></div>
+            </section>
+            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+            <script>
+                const reportMarkdown = {{ result.ai_report|tojson }};
+                document.getElementById('ai-report-content').innerHTML = marked.parse(reportMarkdown);
+            </script>
+            <style>
+                #ai-report-content h2 { font-size: 1.4em; margin: 20px 0 10px 0; color: #333; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+                #ai-report-content h3 { font-size: 1.2em; margin: 15px 0 8px 0; color: #444; }
+                #ai-report-content h4 { font-size: 1.1em; margin: 12px 0 6px 0; color: #555; }
+                #ai-report-content table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                #ai-report-content th, #ai-report-content td { padding: 8px 12px; border: 1px solid #ddd; text-align: left; }
+                #ai-report-content th { background: #f5f5f5; font-weight: bold; }
+                #ai-report-content ul, #ai-report-content ol { margin: 10px 0; padding-left: 25px; }
+                #ai-report-content li { margin: 5px 0; }
+                #ai-report-content strong { color: #333; }
+                #ai-report-content hr { border: none; border-top: 2px solid #eee; margin: 20px 0; }
+                #ai-report-content code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+            </style>
+            {% endif %}
 
-                    <div class="recommendations-list">
-                        {% for rec in result.recommendations %}
-                            <div class="recommendation-card priority-{{ rec.priority }}">
-                                <div class="rec-priority">Priority {{ rec.priority }}</div>
-                                <h4>{{ rec.title }}</h4>
-                                <p>{{ rec.description }}</p>
-                                {% if rec.expected_impact %}
-                                    <div class="expected-impact">
-                                        <strong>Expected Impact:</strong> {{ rec.expected_impact }}
-                                    </div>
-                                {% endif %}
-                            </div>
+            <!-- Raw Messages (debug, collapsed) -->
+            {% if result.raw_messages %}
+            <section class="result-section" style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <details>
+                    <summary style="cursor: pointer; font-weight: bold; color: #666; font-size: 14px;">
+                        🔧 Debug: Raw API responses ({{ result.raw_messages|length }})
+                    </summary>
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-top: 10px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
+                        {% for msg in result.raw_messages %}
+                        <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
+                            {{ msg[:500] }}{% if msg|length > 500 %}...{% endif %}
+                        </div>
                         {% endfor %}
                     </div>
-                </section>
+                </details>
+            </section>
             {% endif %}
+
         {% endif %}
     {% else %}
-        <div class="no-result">
-            <p>No result data available.</p>
+        <div class="no-result" style="background: #f5f5f5; padding: 40px; text-align: center; border-radius: 8px;">
+            <p>Результаты аудита недоступны.</p>
         </div>
     {% endif %}
 </div>

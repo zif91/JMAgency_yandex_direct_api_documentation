@@ -25,12 +25,19 @@ try:
     CLAUDE_SDK_AVAILABLE = True
 except ImportError:
     CLAUDE_SDK_AVAILABLE = False
-    # Fallback imports for basic Anthropic API
-    try:
-        import anthropic
-        ANTHROPIC_AVAILABLE = True
-    except ImportError:
-        ANTHROPIC_AVAILABLE = False
+
+# Fallback imports for API calls
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -39,17 +46,19 @@ from yandex_api import YandexDirectAPI
 from agent.tools import audit_tools
 
 
-# Default model - Claude Haiku 4.5 (latest as of Oct 2025)
-DEFAULT_MODEL = "claude-haiku-4-5-20251022"
+# Default models
+DEFAULT_MODEL_ANTHROPIC = "claude-haiku-4-5-20251022"
+DEFAULT_MODEL_OPENROUTER = "anthropic/claude-haiku-4.5"
 
 
 @dataclass
 class AuditConfig:
     """Configuration for audit agent."""
-    model: str = DEFAULT_MODEL
+    model: str = None  # Will be set based on provider
     max_tokens: int = 4096
     temperature: float = 0.3
     use_sdk: bool = True  # Use Claude Agent SDK if available
+    provider: str = "openrouter"  # "openrouter" or "anthropic"
 
 
 @dataclass
@@ -62,6 +71,7 @@ class AuditResult:
     potential_savings: float
     full_report: dict
     raw_messages: list
+    ai_report: str = ""  # Final AI report text in markdown
 
     def to_dict(self):
         return asdict(self)
@@ -97,8 +107,24 @@ class YandexDirectAuditAgent:
         self.yandex_token = yandex_token
         self.yandex_login = yandex_login
         self.account_name = account_name
-        self.api_key = anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")
-        self.config = config or AuditConfig()
+
+        # Determine provider from env
+        self.provider = os.getenv("LLM_PROVIDER", "openrouter")
+
+        # Set API keys based on provider
+        if self.provider == "openrouter":
+            self.api_key = os.getenv("OPENROUTER_API_KEY")
+            self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        else:
+            self.api_key = anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")
+            self.base_url = None
+
+        # Set config with correct default model
+        self.config = config or AuditConfig(provider=self.provider)
+        if self.config.model is None:
+            self.config.model = os.getenv("AUDIT_MODEL") or (
+                DEFAULT_MODEL_OPENROUTER if self.provider == "openrouter" else DEFAULT_MODEL_ANTHROPIC
+            )
 
         # Initialize Yandex API client
         self.yandex_api = YandexDirectAPI(
@@ -135,12 +161,15 @@ class YandexDirectAuditAgent:
         # Reset memory for new audit
         audit_tools.reset_memory()
 
-        if CLAUDE_SDK_AVAILABLE and self.config.use_sdk:
+        # Route based on provider
+        if self.provider == "openrouter" and OPENAI_AVAILABLE:
+            return await self._run_with_openrouter()
+        elif CLAUDE_SDK_AVAILABLE and self.config.use_sdk:
             return await self._run_with_sdk()
         elif ANTHROPIC_AVAILABLE:
             return await self._run_with_anthropic_api()
         else:
-            raise RuntimeError("Neither Claude Agent SDK nor Anthropic library available")
+            raise RuntimeError("No LLM provider available. Install openai or anthropic library.")
 
     async def _run_with_sdk(self) -> AuditResult:
         """Run audit using Claude Agent SDK."""
@@ -365,6 +394,153 @@ class YandexDirectAuditAgent:
 
         return self._parse_result(all_messages)
 
+    async def _run_with_openrouter(self) -> AuditResult:
+        """Run audit using OpenRouter API (OpenAI-compatible)."""
+        client = openai.OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url
+        )
+
+        # Define tools in OpenAI format
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_campaigns_stats",
+                    "description": "Получить статистику по кампаниям: расходы, клики, показы, конверсии за 30 дней",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_budget_conflicts",
+                    "description": "Проверить конфликты бюджетов: лимиты, достаточность для конверсий",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_conversions_status",
+                    "description": "Проверить настройки конверсий: цели из Метрики",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_keywords_analysis",
+                    "description": "Анализ ключевых слов: минус-слова, типы соответствия",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_autotargeting_stats",
+                    "description": "Проверить процент автотаргетинга",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_ads_quality",
+                    "description": "Анализ качества объявлений",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_account_structure",
+                    "description": "Анализ структуры аккаунта",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_utm_analysis",
+                    "description": "Проверка UTM-разметки",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_verdict",
+                    "description": "Сгенерировать финальное заключение",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            }
+        ]
+
+        tool_handlers = {
+            "get_campaigns_stats": audit_tools.get_campaigns_stats,
+            "get_budget_conflicts": audit_tools.get_budget_conflicts,
+            "get_conversions_status": audit_tools.get_conversions_status,
+            "get_keywords_analysis": audit_tools.get_keywords_analysis,
+            "get_autotargeting_stats": audit_tools.get_autotargeting_stats,
+            "get_ads_quality": audit_tools.get_ads_quality,
+            "get_account_structure": audit_tools.get_account_structure,
+            "get_utm_analysis": audit_tools.get_utm_analysis,
+            "generate_verdict": audit_tools.generate_verdict
+        }
+
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {
+                "role": "user",
+                "content": f"Проведи полный аудит аккаунта Яндекс Директ '{self.account_name}' (логин: {self.yandex_login}). "
+                           "Последовательно выполни все проверки и в конце выдай заключение."
+            }
+        ]
+
+        all_messages = []
+
+        # Agentic loop
+        while True:
+            response = client.chat.completions.create(
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+                temperature=self.config.temperature,
+                tools=tools,
+                messages=messages
+            )
+
+            all_messages.append(response)
+            choice = response.choices[0]
+
+            # Check if we need to handle tool calls
+            if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+                # Add assistant message
+                messages.append(choice.message)
+
+                # Process tool calls
+                for tool_call in choice.message.tool_calls:
+                    tool_name = tool_call.function.name
+                    tool_args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
+
+                    print(f"Calling tool: {tool_name}")
+
+                    # Execute tool
+                    handler = tool_handlers.get(tool_name)
+                    if handler:
+                        result = await handler(tool_args)
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": result["content"][0]["text"]
+                        })
+
+            else:
+                # End of conversation
+                break
+
+        return self._parse_result(all_messages)
+
     def _parse_result(self, messages: list) -> AuditResult:
         """Parse messages into AuditResult."""
         # Get final verdict from memory
@@ -393,6 +569,25 @@ class YandexDirectAuditAgent:
             for i in all_issues
         )
 
+        # Extract AI report from last message
+        ai_report = ""
+        if messages:
+            last_msg = messages[-1]
+            try:
+                # OpenRouter/OpenAI format
+                if hasattr(last_msg, 'choices') and last_msg.choices:
+                    content = last_msg.choices[0].message.content
+                    if content:
+                        ai_report = content
+                # Anthropic format
+                elif hasattr(last_msg, 'content'):
+                    for block in last_msg.content:
+                        if hasattr(block, 'text'):
+                            ai_report = block.text
+                            break
+            except Exception:
+                pass
+
         return AuditResult(
             verdict=verdict,
             score=round(avg_score, 1),
@@ -404,7 +599,8 @@ class YandexDirectAuditAgent:
                 "issues": all_issues,
                 "campaigns": audit_tools.audit_memory.get("campaigns", {})
             },
-            raw_messages=[str(m) for m in messages]
+            raw_messages=[str(m) for m in messages],
+            ai_report=ai_report
         )
 
 

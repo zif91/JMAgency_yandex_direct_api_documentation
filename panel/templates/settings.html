@@ -38,15 +38,15 @@
         <pre><code>Authorization: Bearer {{ user.api_key[:20] }}...</code></pre>
 
         <h3>Get All Connected Accounts</h3>
-        <pre><code>curl -X GET http://localhost:5000/api/accounts \
+        <pre><code>curl -X GET {{ request.url_root }}api/accounts \
   -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
 
         <h3>Get Campaigns</h3>
-        <pre><code>curl -X GET "http://localhost:5000/api/campaigns?account_id=ACCOUNT_ID" \
+        <pre><code>curl -X GET "{{ request.url_root }}api/campaigns?account_id=ACCOUNT_ID" \
   -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
 
         <h3>Get Ad Groups</h3>
-        <pre><code>curl -X POST http://localhost:5000/api/adgroups \
+        <pre><code>curl -X POST {{ request.url_root }}api/adgroups \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -55,7 +55,7 @@
   }'</code></pre>
 
         <h3>Get Keywords</h3>
-        <pre><code>curl -X POST http://localhost:5000/api/keywords \
+        <pre><code>curl -X POST {{ request.url_root }}api/keywords \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -64,7 +64,7 @@
   }'</code></pre>
 
         <h3>Run Audit via API</h3>
-        <pre><code>curl -X POST http://localhost:5000/api/audit \
+        <pre><code>curl -X POST {{ request.url_root }}api/audit \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -73,11 +73,11 @@
   }'</code></pre>
 
         <h3>Get Audit History</h3>
-        <pre><code>curl -X GET "http://localhost:5000/api/audit/history?limit=10" \
+        <pre><code>curl -X GET "{{ request.url_root }}api/audit/history?limit=10" \
   -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
 
         <h3>Get Performance Report</h3>
-        <pre><code>curl -X POST http://localhost:5000/api/reports \
+        <pre><code>curl -X POST {{ request.url_root }}api/reports \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

@@ -10,19 +10,24 @@ SSH: ssh jacov9bb@jacov9bb.beget.tech
 https://direct.jmagency.ru
 ```
 
-## Deploy Commands
+## Project Path on Server
+```
+~/direct.jmagency.ru/public_html/
+```
+
+## Deploy Commands (rsync method)
 ```bash
-# Connect to server
-ssh jacov9bb@jacov9bb.beget.tech
+# Upload agent folder
+rsync -avz panel/agent/ jacov9bb@jacov9bb.beget.tech:~/direct.jmagency.ru/public_html/agent/
 
-# Go to project directory
-cd ~/yandex-direct-panel
+# Upload templates
+rsync -avz panel/templates/ jacov9bb@jacov9bb.beget.tech:~/direct.jmagency.ru/public_html/templates/
 
-# Pull latest changes
-git pull origin main
+# Upload requirements
+rsync -avz panel/requirements.txt jacov9bb@jacov9bb.beget.tech:~/direct.jmagency.ru/public_html/
 
-# Restart app (touch passenger_wsgi.py to restart)
-touch passenger_wsgi.py
+# Restart app
+ssh jacov9bb@jacov9bb.beget.tech "touch ~/direct.jmagency.ru/public_html/passenger_wsgi.py"
 ```
 
 ## Files to update manually (not in git)

@@ -38,15 +38,15 @@
         <pre><code>Authorization: Bearer {{ user.api_key[:20] }}...</code></pre>
 
         <h3>Get All Connected Accounts</h3>
-        <pre><code>curl -X GET {{ request.url_root }}api/accounts \
+        <pre><code>curl -X GET https://direct.jmagency.ru/api/accounts \
   -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
 
         <h3>Get Campaigns</h3>
-        <pre><code>curl -X GET "{{ request.url_root }}api/campaigns?account_id=ACCOUNT_ID" \
+        <pre><code>curl -X GET "https://direct.jmagency.ru/api/campaigns?account_id=ACCOUNT_ID" \
   -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
 
         <h3>Get Ad Groups</h3>
-        <pre><code>curl -X POST {{ request.url_root }}api/adgroups \
+        <pre><code>curl -X POST https://direct.jmagency.ru/api/adgroups \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -55,7 +55,7 @@
   }'</code></pre>
 
         <h3>Get Keywords</h3>
-        <pre><code>curl -X POST {{ request.url_root }}api/keywords \
+        <pre><code>curl -X POST https://direct.jmagency.ru/api/keywords \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -64,7 +64,7 @@
   }'</code></pre>
 
         <h3>Run Audit via API</h3>
-        <pre><code>curl -X POST {{ request.url_root }}api/audit \
+        <pre><code>curl -X POST https://direct.jmagency.ru/api/audit \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -73,11 +73,11 @@
   }'</code></pre>
 
         <h3>Get Audit History</h3>
-        <pre><code>curl -X GET "{{ request.url_root }}api/audit/history?limit=10" \
+        <pre><code>curl -X GET "https://direct.jmagency.ru/api/audit/history?limit=10" \
   -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
 
         <h3>Get Performance Report</h3>
-        <pre><code>curl -X POST {{ request.url_root }}api/reports \
+        <pre><code>curl -X POST https://direct.jmagency.ru/api/reports \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

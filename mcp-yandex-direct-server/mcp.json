@@ -1,0 +1,9 @@
+{
+  "name": "mcp-yandex-direct-server",
+  "description": "MCP сервер для аудита Яндекс.Директ v5: отчеты, кампании, группы, объявления, ключевые слова и пр., с OAuth и секретными кодами для выбора токена.",
+  "command": "node",
+  "args": ["dist/index.js"],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
